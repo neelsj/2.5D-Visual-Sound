@@ -14,7 +14,7 @@ from data.data_loader import CreateDataLoader
 from models.models import ModelBuilder
 from models.audioVisual_model import AudioVisualModel
 from torch.autograd import Variable
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 def create_optimizer(nets, opt):
     (net_visual, net_audio) = nets
@@ -46,144 +46,149 @@ def display_val(model, loss_criterion, writer, index, dataset_val, opt):
     print('val loss: %.3f' % avg_loss)
     return avg_loss 
 
-#parse arguments
-opt = TrainOptions().parse()
-opt.device = torch.device("cuda")
+if __name__ == '__main__':
 
-#construct data loader
-data_loader = CreateDataLoader(opt)
-dataset = data_loader.load_data()
-dataset_size = len(data_loader)
-print('#training clips = %d' % dataset_size)
+	torch.multiprocessing.freeze_support()
 
-#create validation set data loader if validation_on option is set
-if opt.validation_on:
-    #temperally set to val to load val data
-    opt.mode = 'val'
-    data_loader_val = CreateDataLoader(opt)
-    dataset_val = data_loader_val.load_data()
-    dataset_size_val = len(data_loader_val)
-    print('#validation clips = %d' % dataset_size_val)
-    opt.mode = 'train' #set it back
+	#parse arguments
+	opt = TrainOptions().parse()
+	opt.device = torch.device("cuda")
 
-if opt.tensorboard:
-    from tensorboardX import SummaryWriter
-    writer = SummaryWriter(comment=opt.name)
-else:
-    writer = None
+	#construct data loader
+	data_loader = CreateDataLoader(opt)
+	dataset = data_loader.load_data()
+	dataset_size = len(data_loader)
+	print('#training clips = %d' % dataset_size)
 
-# network builders
-builder = ModelBuilder()
-net_visual = builder.build_visual(weights=opt.weights_visual)
-net_audio = builder.build_audio(
-        ngf=opt.unet_ngf,
-        input_nc=opt.unet_input_nc,
-        output_nc=opt.unet_output_nc,
-        weights=opt.weights_audio)
-nets = (net_visual, net_audio)
+	#create validation set data loader if validation_on option is set
+	if opt.validation_on:
+		#temperally set to val to load val data
+		opt.mode = 'val'
+		data_loader_val = CreateDataLoader(opt)
+		dataset_val = data_loader_val.load_data()
+		dataset_size_val = len(data_loader_val)
+		print('#validation clips = %d' % dataset_size_val)
+		opt.mode = 'train' #set it back
 
-# construct our audio-visual model
-model = AudioVisualModel(nets, opt)
-model = torch.nn.DataParallel(model, device_ids=opt.gpu_ids)
-model.to(opt.device)
+	if opt.tensorboard:
+		from torch.utils.tensorboard import SummaryWriter
+		writer = SummaryWriter(comment=opt.name)
+	else:
+		writer = None
 
-# set up optimizer
-optimizer = create_optimizer(nets, opt)
+	# network builders
+	builder = ModelBuilder()
+	net_visual = builder.build_visual(weights=opt.weights_visual)
+	net_audio = builder.build_audio(
+			ngf=opt.unet_ngf,
+			input_nc=opt.unet_input_nc,
+			output_nc=opt.unet_output_nc,
+			weights=opt.weights_audio)
+	nets = (net_visual, net_audio)
 
-# set up loss function
-loss_criterion = torch.nn.MSELoss()
-if(len(opt.gpu_ids) > 0):
-    loss_criterion.cuda(opt.gpu_ids[0])
+	# construct our audio-visual model
+	model = AudioVisualModel(nets, opt)
+	if (len(opt.gpu_ids) > 1):
+	    model = torch.nn.DataParallel(model, device_ids=opt.gpu_ids)
+	model.to(opt.device)
 
-# initialization
-total_steps = 0
-data_loading_time = []
-model_forward_time = []
-model_backward_time = []
-batch_loss = []
-best_err = float("inf")
+	# set up optimizer
+	optimizer = create_optimizer(nets, opt)
 
-for epoch in range(1, opt.niter+1):
-        torch.cuda.synchronize()
-        epoch_start_time = time.time()
+	# set up loss function
+	loss_criterion = torch.nn.MSELoss()
+	if(len(opt.gpu_ids) > 0):
+		loss_criterion.cuda(opt.gpu_ids[0])
 
-        if(opt.measure_time):
-                iter_start_time = time.time()
-        for i, data in enumerate(dataset):
-                if(opt.measure_time):
-                    torch.cuda.synchronize()
-                    iter_data_loaded_time = time.time()
+	# initialization
+	total_steps = 0
+	data_loading_time = []
+	model_forward_time = []
+	model_backward_time = []
+	batch_loss = []
+	best_err = float("inf")
 
-                total_steps += opt.batchSize
+	for epoch in range(1, opt.niter+1):
+			torch.cuda.synchronize()
+			epoch_start_time = time.time()
 
-                # forward pass
-                model.zero_grad()
-                output = model.forward(data)
+			if(opt.measure_time):
+					iter_start_time = time.time()
+			for i, data in enumerate(dataset):
+					if(opt.measure_time):
+						torch.cuda.synchronize()
+						iter_data_loaded_time = time.time()
 
-                # compute loss
-                loss = loss_criterion(output['binaural_spectrogram'], Variable(output['audio_gt'], requires_grad=False))
-                batch_loss.append(loss.item())
+					total_steps += opt.batchSize
 
-                if(opt.measure_time):
-                    torch.cuda.synchronize()
-                    iter_data_forwarded_time = time.time()
+					# forward pass
+					model.zero_grad()
+					output = model.forward(data)
 
-                # update optimizer
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+					# compute loss
+					loss = loss_criterion(output['binaural_spectrogram'], Variable(output['audio_gt'], requires_grad=False))
+					batch_loss.append(loss.item())
 
-                if(opt.measure_time):
-                        iter_model_backwarded_time = time.time()
-                        data_loading_time.append(iter_data_loaded_time - iter_start_time)
-                        model_forward_time.append(iter_data_forwarded_time - iter_data_loaded_time)
-                        model_backward_time.append(iter_model_backwarded_time - iter_data_forwarded_time)
+					if(opt.measure_time):
+						torch.cuda.synchronize()
+						iter_data_forwarded_time = time.time()
 
-                if(total_steps // opt.batchSize % opt.display_freq == 0):
-                        print('Display training progress at (epoch %d, total_steps %d)' % (epoch, total_steps))
-                        avg_loss = sum(batch_loss) / len(batch_loss)
-                        print('Average loss: %.3f' % (avg_loss))
-                        batch_loss = []
-                        if opt.tensorboard:
-                            writer.add_scalar('data/loss', avg_loss, total_steps)
-                        if(opt.measure_time):
-                                print('average data loading time: ' + str(sum(data_loading_time)/len(data_loading_time)))
-                                print('average forward time: ' + str(sum(model_forward_time)/len(model_forward_time)))
-                                print('average backward time: ' + str(sum(model_backward_time)/len(model_backward_time)))
-                                data_loading_time = []
-                                model_forward_time = []
-                                model_backward_time = []
-                        print('end of display \n')
+					# update optimizer
+					optimizer.zero_grad()
+					loss.backward()
+					optimizer.step()
 
-                if(total_steps // opt.batchSize % opt.save_latest_freq == 0):
-                        print('saving the latest model (epoch %d, total_steps %d)' % (epoch, total_steps))
-                        torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'visual_latest.pth'))
-                        torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'audio_latest.pth'))
+					if(opt.measure_time):
+							iter_model_backwarded_time = time.time()
+							data_loading_time.append(iter_data_loaded_time - iter_start_time)
+							model_forward_time.append(iter_data_forwarded_time - iter_data_loaded_time)
+							model_backward_time.append(iter_model_backwarded_time - iter_data_forwarded_time)
 
-                if(total_steps // opt.batchSize % opt.validation_freq == 0 and opt.validation_on):
-                        model.eval()
-                        opt.mode = 'val'
-                        print('Display validation results at (epoch %d, total_steps %d)' % (epoch, total_steps))
-                        val_err = display_val(model, loss_criterion, writer, total_steps, dataset_val, opt)
-                        print('end of display \n')
-                        model.train()
-                        opt.mode = 'train'
-                        #save the model that achieves the smallest validation error
-                        if val_err < best_err:
-                            best_err = val_err
-                            print('saving the best model (epoch %d, total_steps %d) with validation error %.3f\n' % (epoch, total_steps, val_err))
-                            torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'visual_best.pth'))
-                            torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'audio_best.pth'))
+					if(total_steps // opt.batchSize % opt.display_freq == 0):
+							print('Display training progress at (epoch %d, total_steps %d)' % (epoch, total_steps))
+							avg_loss = sum(batch_loss) / len(batch_loss)
+							print('Average loss: %.3f' % (avg_loss))
+							batch_loss = []
+							if opt.tensorboard:
+								writer.add_scalar('data/loss', avg_loss, total_steps)
+							if(opt.measure_time):
+									print('average data loading time: ' + str(sum(data_loading_time)/len(data_loading_time)))
+									print('average forward time: ' + str(sum(model_forward_time)/len(model_forward_time)))
+									print('average backward time: ' + str(sum(model_backward_time)/len(model_backward_time)))
+									data_loading_time = []
+									model_forward_time = []
+									model_backward_time = []
+							print('end of display \n')
 
-                if(opt.measure_time):
-                        iter_start_time = time.time()
+					if(total_steps // opt.batchSize % opt.save_latest_freq == 0):
+							print('saving the latest model (epoch %d, total_steps %d)' % (epoch, total_steps))
+							torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'visual_latest.pth'))
+							torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'audio_latest.pth'))
 
-        if(epoch % opt.save_epoch_freq == 0):
-                print('saving the model at the end of epoch %d, total_steps %d' % (epoch, total_steps))
-                torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, str(epoch) + '_visual.pth'))
-                torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, str(epoch) + '_audio.pth'))
+					if(total_steps // opt.batchSize % opt.validation_freq == 0 and opt.validation_on):
+							model.eval()
+							opt.mode = 'val'
+							print('Display validation results at (epoch %d, total_steps %d)' % (epoch, total_steps))
+							val_err = display_val(model, loss_criterion, writer, total_steps, dataset_val, opt)
+							print('end of display \n')
+							model.train()
+							opt.mode = 'train'
+							#save the model that achieves the smallest validation error
+							if val_err < best_err:
+								best_err = val_err
+								print('saving the best model (epoch %d, total_steps %d) with validation error %.3f\n' % (epoch, total_steps, val_err))
+								torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'visual_best.pth'))
+								torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'audio_best.pth'))
 
-        #decrease learning rate 6% every opt.learning_rate_decrease_itr epochs
-        if(opt.learning_rate_decrease_itr > 0 and epoch % opt.learning_rate_decrease_itr == 0):
-            decrease_learning_rate(optimizer, opt.decay_factor)
-            print('decreased learning rate by ', opt.decay_factor)
+					if(opt.measure_time):
+							iter_start_time = time.time()
+
+			if(epoch % opt.save_epoch_freq == 0):
+					print('saving the model at the end of epoch %d, total_steps %d' % (epoch, total_steps))
+					torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, str(epoch) + '_visual.pth'))
+					torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, str(epoch) + '_audio.pth'))
+
+			#decrease learning rate 6% every opt.learning_rate_decrease_itr epochs
+			if(opt.learning_rate_decrease_itr > 0 and epoch % opt.learning_rate_decrease_itr == 0):
+				decrease_learning_rate(optimizer, opt.decay_factor)
+				print('decreased learning rate by ', opt.decay_factor)

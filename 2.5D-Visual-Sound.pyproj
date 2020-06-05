@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{15227e9b-8c5a-4cce-9e26-a46c36cfd081}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>train.py</StartupFile>
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>CondaEnv|CondaEnv|pytorch</InterpreterId>
+    <CommandLineArguments>--hdf5FolderPath E:/Research/Videos/FAIR-Play/splits/split1 --data_dir E:/Research/Videos/FAIR-Play/ --name mono2binaural --model audioVisual --checkpoints_dir ./checkpoints --save_epoch_freq 50 --display_freq 10 --save_latest_freq 100 --batchSize 32 --learning_rate_decrease_itr 10 --niter 1000 --lr_visual 0.0001 --lr_audio 0.001 --nThreads 32 --gpu_ids 0 --validation_on --validation_freq 100 --validation_batches 50 --tensorboard True</CommandLineArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <IsWindowsApplication>False</IsWindowsApplication>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="data\audioVisual_dataset.py" />
+    <Compile Include="data\base_dataset.py" />
+    <Compile Include="data\base_data_loader.py" />
+    <Compile Include="data\custom_dataset_data_loader.py" />
+    <Compile Include="data\data_loader.py" />
+    <Compile Include="data\__init__.py" />
+    <Compile Include="demo.py" />
+    <Compile Include="evaluate.py" />
+    <Compile Include="extractFrames.py" />
+    <Compile Include="models\audioVisual_model.py" />
+    <Compile Include="models\criterion.py" />
+    <Compile Include="models\models.py" />
+    <Compile Include="models\networks.py" />
+    <Compile Include="models\__init__.py" />
+    <Compile Include="options\base_options.py" />
+    <Compile Include="options\test_options.py" />
+    <Compile Include="options\train_options.py" />
+    <Compile Include="options\__init__.py" />
+    <Compile Include="reEncodeAudio.py" />
+    <Compile Include="train.py" />
+    <Compile Include="util\util.py" />
+    <Compile Include="util\__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="data" />
+    <Folder Include="models" />
+    <Folder Include="options" />
+    <Folder Include="util" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="CondaEnv|CondaEnv|pytorch" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

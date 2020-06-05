@@ -67,10 +67,12 @@ class AudioVisualDataset(BaseDataset):
 
     def __getitem__(self, index):
         #load audio
-        audio, audio_rate = librosa.load(self.audios[index], sr=self.opt.audio_sampling_rate, mono=False)
+        audio_file = os.path.split(self.audios[index].decode('utf-8'))[1]
+        audio_path = os.path.join(self.opt.data_dir, self.opt.audio_dir, audio_file)
+        audio, audio_rate = librosa.load(audio_path, sr=self.opt.audio_sampling_rate, mono=False)
 
         #randomly get a start time for the audio segment from the 10s clip
-        audio_start_time = random.uniform(0, 9.9 - self.opt.audio_length)
+        audio_start_time = random.uniform(0, 9 - self.opt.audio_length)
         audio_end_time = audio_start_time + self.opt.audio_length
         audio_start = int(audio_start_time * self.opt.audio_sampling_rate)
         audio_end = audio_start + int(self.opt.audio_length * self.opt.audio_sampling_rate)
@@ -80,15 +82,13 @@ class AudioVisualDataset(BaseDataset):
         audio_channel2 = audio[1,:]
 
         #get the frame dir path based on audio path
-        path_parts = self.audios[index].strip().split('/')
-        path_parts[-1] = path_parts[-1][:-4] + '.mp4'
-        path_parts[-2] = 'frames'
-        frame_path = '/'.join(path_parts)
+        frames_dir = os.path.splitext(audio_file)[0]
+        frame_path = os.path.join(self.opt.data_dir, self.opt.frames_dir, frames_dir)
 
         # get the closest frame to the audio segment
         #frame_index = int(round((audio_start_time + audio_end_time) / 2.0 + 0.5))  #1 frame extracted per second
         frame_index = int(round(((audio_start_time + audio_end_time) / 2.0 + 0.05) * 10))  #10 frames extracted per second
-        frame = process_image(Image.open(os.path.join(frame_path, str(frame_index).zfill(6) + '.png')).convert('RGB'), self.opt.enable_data_augmentation)
+        frame = process_image(Image.open(os.path.join(frame_path, str(frame_index).zfill(6) + '.jpg')).convert('RGB'), self.opt.enable_data_augmentation)
         frame = self.vision_transform(frame)
 
         #passing the spectrogram of the difference

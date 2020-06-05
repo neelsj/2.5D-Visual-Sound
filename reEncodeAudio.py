@@ -46,7 +46,7 @@ def main():
 	args = parser.parse_args()
 
 	audio_list = glob.glob(args.audio_dir_path + '/*.wav')
-	print "Total number of audios to re-encode: ", len(audio_list)
+	print ("Total number of audios to re-encode: ", len(audio_list))
 	for audio_path in audio_list:
 		reEncodeAudio(os.path.join(args.audio_dir_path, audio_path), args.new_rate)
 

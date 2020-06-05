@@ -25,9 +25,10 @@ class AudioVisualModel(torch.nn.Module):
         self.net_visual, self.net_audio = nets
 
     def forward(self, input, volatile=False):
-        visual_input = input['frame']
-        audio_diff = input['audio_diff_spec']
-        audio_mix = input['audio_mix_spec']
+        visual_input = input['frame'].to(self.opt.device)
+        audio_diff = input['audio_diff_spec'].to(self.opt.device)
+        audio_mix = input['audio_mix_spec'].to(self.opt.device)
+
         audio_gt = Variable(audio_diff[:,:,:-1,:], requires_grad=False)
 
         input_spectrogram = Variable(audio_mix, requires_grad=False, volatile=volatile)
