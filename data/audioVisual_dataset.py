@@ -54,7 +54,7 @@ class AudioVisualDataset(BaseDataset):
         self.audios = []
 
         #load hdf5 file here
-        h5f_path = os.path.join(opt.hdf5FolderPath, opt.mode+".h5")
+        h5f_path = os.path.join(opt.data_dir, opt.hdf5FolderPath, opt.mode+".h5")
         h5f = h5py.File(h5f_path, 'r')
         self.audios = h5f['audio'][:]
 

@@ -162,8 +162,8 @@ if __name__ == '__main__':
 
 					if(total_steps // opt.batchSize % opt.save_latest_freq == 0):
 							print('saving the latest model (epoch %d, total_steps %d)' % (epoch, total_steps))
-							torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'visual_latest.pth'))
-							torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'audio_latest.pth'))
+							torch.save(net_visual.state_dict(), os.path.join(opt.output_dir, opt.checkpoints_dir, opt.name, 'visual_latest.pth'))
+							torch.save(net_audio.state_dict(), os.path.join(opt.output_dir, opt.checkpoints_dir, opt.name, 'audio_latest.pth'))
 
 					if(total_steps // opt.batchSize % opt.validation_freq == 0 and opt.validation_on):
 							model.eval()
@@ -177,16 +177,16 @@ if __name__ == '__main__':
 							if val_err < best_err:
 								best_err = val_err
 								print('saving the best model (epoch %d, total_steps %d) with validation error %.3f\n' % (epoch, total_steps, val_err))
-								torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'visual_best.pth'))
-								torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, 'audio_best.pth'))
+								torch.save(net_visual.state_dict(), os.path.join(opt.output_dir, opt.checkpoints_dir, opt.name, 'visual_best.pth'))
+								torch.save(net_audio.state_dict(), os.path.join(opt.output_dir, opt.checkpoints_dir, opt.name, 'audio_best.pth'))
 
 					if(opt.measure_time):
 							iter_start_time = time.time()
 
 			if(epoch % opt.save_epoch_freq == 0):
 					print('saving the model at the end of epoch %d, total_steps %d' % (epoch, total_steps))
-					torch.save(net_visual.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, str(epoch) + '_visual.pth'))
-					torch.save(net_audio.state_dict(), os.path.join('.', opt.checkpoints_dir, opt.name, str(epoch) + '_audio.pth'))
+					torch.save(net_visual.state_dict(), os.path.join(opt.output_dir, opt.checkpoints_dir, opt.name, str(epoch) + '_visual.pth'))
+					torch.save(net_audio.state_dict(), os.path.join(opt.output_dir, opt.checkpoints_dir, opt.name, str(epoch) + '_audio.pth'))
 
 			#decrease learning rate 6% every opt.learning_rate_decrease_itr epochs
 			if(opt.learning_rate_decrease_itr > 0 and epoch % opt.learning_rate_decrease_itr == 0):

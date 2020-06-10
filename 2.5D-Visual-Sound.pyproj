@@ -12,7 +12,7 @@
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId>CondaEnv|CondaEnv|pytorch</InterpreterId>
-    <CommandLineArguments>--hdf5FolderPath E:/Research/Videos/FAIR-Play/splits/split1 --data_dir E:/Research/Videos/FAIR-Play/ --name mono2binaural --model audioVisual --checkpoints_dir ./checkpoints --save_epoch_freq 50 --display_freq 10 --save_latest_freq 100 --batchSize 32 --learning_rate_decrease_itr 10 --niter 1000 --lr_visual 0.0001 --lr_audio 0.001 --nThreads 32 --gpu_ids 0 --validation_on --validation_freq 100 --validation_batches 50 --tensorboard True</CommandLineArguments>
+    <CommandLineArguments>--hdf5FolderPath splits/split1 --data_dir E:/Research/Videos/FAIR-Play/ --name mono2binaural --model audioVisual --checkpoints_dir checkpoints --save_epoch_freq 50 --display_freq 10 --save_latest_freq 100 --batchSize 32 --learning_rate_decrease_itr 10 --niter 1000 --lr_visual 0.0001 --lr_audio 0.001 --nThreads 16 --gpu_ids 0 --validation_on --validation_freq 100 --validation_batches 50</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
